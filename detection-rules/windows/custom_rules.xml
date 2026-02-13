@@ -1,0 +1,415 @@
+<!-- SOC-in-a-Box Custom Detection Rules -->
+<!-- Mapped to MITRE ATT&CK Framework -->
+
+<group name="custom,soc-in-a-box,">
+
+  <!-- ============================================ -->
+  <!-- INITIAL ACCESS (TA0001) -->
+  <!-- ============================================ -->
+  
+  <!-- T1566.001 - Phishing: Spearphishing Attachment -->
+  <rule id="100001" level="12">
+    <if_sid>61613</if_sid>
+    <field name="win.eventdata.parentImage" type="pcre2">(?i)outlook|thunderbird|winword|excel|powerpnt</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)powershell|cmd|wscript|cscript|mshta</field>
+    <description>Possible phishing: Office application spawned suspicious process</description>
+    <mitre>
+      <id>T1566.001</id>
+    </mitre>
+    <group>initial_access,phishing,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- EXECUTION (TA0002) -->
+  <!-- ============================================ -->
+
+  <!-- T1059.001 - PowerShell -->
+  <rule id="100010" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)-enc|-encodedcommand|-e\s+[A-Za-z0-9+/=]{50,}</field>
+    <description>Encoded PowerShell command detected</description>
+    <mitre>
+      <id>T1059.001</id>
+    </mitre>
+    <group>execution,powershell,encoded,</group>
+  </rule>
+
+  <rule id="100011" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(bypass|unrestricted|hidden|noprofile|noninteractive)</field>
+    <description>Suspicious PowerShell execution flags</description>
+    <mitre>
+      <id>T1059.001</id>
+    </mitre>
+    <group>execution,powershell,</group>
+  </rule>
+
+  <rule id="100012" level="14">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(Invoke-Expression|IEX|Invoke-WebRequest|IWR|downloadstring|downloadfile|Net\.WebClient)</field>
+    <description>PowerShell download and execute detected</description>
+    <mitre>
+      <id>T1059.001</id>
+      <id>T1105</id>
+    </mitre>
+    <group>execution,powershell,download,</group>
+  </rule>
+
+  <!-- T1059.003 - Windows Command Shell -->
+  <rule id="100020" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.parentImage" type="pcre2">(?i)winword|excel|powerpnt|outlook</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)cmd\.exe</field>
+    <description>CMD spawned by Office application - possible macro execution</description>
+    <mitre>
+      <id>T1059.003</id>
+    </mitre>
+    <group>execution,office,</group>
+  </rule>
+
+  <!-- T1047 - WMI Execution -->
+  <rule id="100021" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)wmic.*process.*call.*create</field>
+    <description>WMI process creation detected</description>
+    <mitre>
+      <id>T1047</id>
+    </mitre>
+    <group>execution,wmi,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- PERSISTENCE (TA0003) -->
+  <!-- ============================================ -->
+
+  <!-- T1547.001 - Registry Run Keys -->
+  <rule id="100030" level="10">
+    <if_sid>61614</if_sid>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)(Run|RunOnce)</field>
+    <description>Registry Run key modification - possible persistence</description>
+    <mitre>
+      <id>T1547.001</id>
+    </mitre>
+    <group>persistence,registry,</group>
+  </rule>
+
+  <!-- T1053.005 - Scheduled Task -->
+  <rule id="100031" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)schtasks.*/create</field>
+    <description>Scheduled task created - possible persistence</description>
+    <mitre>
+      <id>T1053.005</id>
+    </mitre>
+    <group>persistence,scheduled_task,</group>
+  </rule>
+
+  <rule id="100032" level="12">
+    <if_sid>100031</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(powershell|cmd|wscript|cscript|mshta)</field>
+    <description>Scheduled task with suspicious command - likely malicious</description>
+    <mitre>
+      <id>T1053.005</id>
+    </mitre>
+    <group>persistence,scheduled_task,</group>
+  </rule>
+
+  <!-- T1543.003 - Windows Service -->
+  <rule id="100033" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)sc\s+(create|config)</field>
+    <description>Service created or modified - possible persistence</description>
+    <mitre>
+      <id>T1543.003</id>
+    </mitre>
+    <group>persistence,service,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- PRIVILEGE ESCALATION (TA0004) -->
+  <!-- ============================================ -->
+
+  <!-- T1134 - Access Token Manipulation -->
+  <rule id="100040" level="14">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(whoami\s*/priv|token|impersonate)</field>
+    <description>Possible token manipulation or privilege check</description>
+    <mitre>
+      <id>T1134</id>
+    </mitre>
+    <group>privilege_escalation,token,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- DEFENSE EVASION (TA0005) -->
+  <!-- ============================================ -->
+
+  <!-- T1070.001 - Clear Windows Event Logs -->
+  <rule id="100050" level="14">
+    <if_sid>60106</if_sid>
+    <description>Security audit log was cleared - possible evidence tampering</description>
+    <mitre>
+      <id>T1070.001</id>
+    </mitre>
+    <group>defense_evasion,log_cleared,</group>
+  </rule>
+
+  <rule id="100051" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)wevtutil.*cl</field>
+    <description>Event log clearing via wevtutil</description>
+    <mitre>
+      <id>T1070.001</id>
+    </mitre>
+    <group>defense_evasion,log_cleared,</group>
+  </rule>
+
+  <!-- T1562.001 - Disable Security Tools -->
+  <rule id="100052" level="14">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(Set-MpPreference|DisableRealtimeMonitoring|DisableBehaviorMonitoring)</field>
+    <description>Windows Defender being disabled</description>
+    <mitre>
+      <id>T1562.001</id>
+    </mitre>
+    <group>defense_evasion,disable_security,</group>
+  </rule>
+
+  <!-- T1027 - Obfuscated Files or Information -->
+  <rule id="100053" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(certutil.*-decode|certutil.*-urlcache)</field>
+    <description>Certutil used for download/decode - possible evasion</description>
+    <mitre>
+      <id>T1027</id>
+      <id>T1105</id>
+    </mitre>
+    <group>defense_evasion,certutil,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- CREDENTIAL ACCESS (TA0006) -->
+  <!-- ============================================ -->
+
+  <!-- T1003.001 - LSASS Memory -->
+  <rule id="100060" level="15">
+    <if_sid>61612</if_sid>
+    <field name="win.eventdata.targetImage" type="pcre2">(?i)lsass\.exe</field>
+    <field name="win.eventdata.grantedAccess" type="pcre2">(0x1010|0x1410|0x1FFFFF)</field>
+    <description>CRITICAL: LSASS memory access - credential dumping attempt</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+    <group>credential_access,lsass,critical,</group>
+  </rule>
+
+  <rule id="100061" level="15">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(mimikatz|sekurlsa|logonpasswords|wdigest)</field>
+    <description>CRITICAL: Mimikatz or credential dumping tool detected</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+    <group>credential_access,mimikatz,critical,</group>
+  </rule>
+
+  <!-- T1003.002 - SAM Database -->
+  <rule id="100062" level="14">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(reg.*save.*sam|reg.*save.*system|reg.*save.*security)</field>
+    <description>SAM/SYSTEM/SECURITY registry hive export - credential theft</description>
+    <mitre>
+      <id>T1003.002</id>
+    </mitre>
+    <group>credential_access,sam,</group>
+  </rule>
+
+  <!-- T1110.001 - Brute Force -->
+  <rule id="100063" level="10" frequency="5" timeframe="120">
+    <if_matched_sid>60122</if_matched_sid>
+    <same_source_ip/>
+    <description>Multiple failed login attempts - possible brute force</description>
+    <mitre>
+      <id>T1110.001</id>
+    </mitre>
+    <group>credential_access,brute_force,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- DISCOVERY (TA0007) -->
+  <!-- ============================================ -->
+
+  <!-- T1082 - System Information Discovery -->
+  <rule id="100070" level="6">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(systeminfo|hostname|whoami)</field>
+    <description>System reconnaissance command executed</description>
+    <mitre>
+      <id>T1082</id>
+    </mitre>
+    <group>discovery,recon,</group>
+  </rule>
+
+  <!-- T1016 - System Network Configuration -->
+  <rule id="100071" level="6">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(ipconfig|nslookup|netstat|arp\s+-a|route\s+print)</field>
+    <description>Network reconnaissance command executed</description>
+    <mitre>
+      <id>T1016</id>
+    </mitre>
+    <group>discovery,network_recon,</group>
+  </rule>
+
+  <!-- T1018 - Remote System Discovery -->
+  <rule id="100072" level="8">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(net\s+view|net\s+group|nltest|dsquery)</field>
+    <description>Domain/network enumeration detected</description>
+    <mitre>
+      <id>T1018</id>
+    </mitre>
+    <group>discovery,domain_recon,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- LATERAL MOVEMENT (TA0008) -->
+  <!-- ============================================ -->
+
+  <!-- T1021.002 - SMB/Windows Admin Shares -->
+  <rule id="100080" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(psexec|paexec|csexec)</field>
+    <description>PsExec or similar tool detected - lateral movement</description>
+    <mitre>
+      <id>T1021.002</id>
+    </mitre>
+    <group>lateral_movement,psexec,</group>
+  </rule>
+
+  <rule id="100081" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)net\s+use.*\$</field>
+    <description>Admin share mapping detected</description>
+    <mitre>
+      <id>T1021.002</id>
+    </mitre>
+    <group>lateral_movement,admin_share,</group>
+  </rule>
+
+  <!-- T1021.006 - Windows Remote Management -->
+  <rule id="100082" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(winrs|Invoke-Command.*-ComputerName|Enter-PSSession)</field>
+    <description>WinRM remote execution detected</description>
+    <mitre>
+      <id>T1021.006</id>
+    </mitre>
+    <group>lateral_movement,winrm,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- COLLECTION (TA0009) -->
+  <!-- ============================================ -->
+
+  <!-- T1560 - Archive Collected Data -->
+  <rule id="100090" level="8">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(7z|winrar|zip).*-p</field>
+    <description>Password-protected archive creation - possible data staging</description>
+    <mitre>
+      <id>T1560</id>
+    </mitre>
+    <group>collection,archive,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- EXFILTRATION (TA0010) -->
+  <!-- ============================================ -->
+
+  <!-- T1048 - Exfiltration Over Alternative Protocol -->
+  <rule id="100100" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(curl|wget|Invoke-RestMethod).*\.(txt|doc|xls|pdf|zip|rar)</field>
+    <description>Possible data exfiltration via HTTP</description>
+    <mitre>
+      <id>T1048</id>
+    </mitre>
+    <group>exfiltration,http,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- RANSOMWARE INDICATORS -->
+  <!-- ============================================ -->
+
+  <rule id="100300" level="15">
+    <if_sid>61613</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)vssadmin|wbadmin</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)delete\s+shadows|delete\s+catalog</field>
+    <description>CRITICAL: Shadow copy deletion - Ransomware indicator</description>
+    <mitre>
+      <id>T1490</id>
+    </mitre>
+    <group>ransomware,impact,critical,</group>
+  </rule>
+
+  <rule id="100301" level="14">
+    <if_sid>61613</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)bcdedit.*recoveryenabled.*no</field>
+    <description>Boot recovery disabled - Ransomware indicator</description>
+    <mitre>
+      <id>T1490</id>
+    </mitre>
+    <group>ransomware,impact,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- LINUX SPECIFIC RULES -->
+  <!-- ============================================ -->
+
+  <!-- Suspicious root activity -->
+  <rule id="100200" level="10">
+    <if_sid>5715</if_sid>
+    <match>sudo</match>
+    <user>^(?!root).*</user>
+    <description>Sudo command executed</description>
+    <mitre>
+      <id>T1548.003</id>
+    </mitre>
+    <group>privilege_escalation,sudo,</group>
+  </rule>
+
+  <!-- SSH brute force -->
+  <rule id="100201" level="10" frequency="5" timeframe="120">
+    <if_matched_sid>5710</if_matched_sid>
+    <same_source_ip/>
+    <description>SSH brute force attempt detected</description>
+    <mitre>
+      <id>T1110.001</id>
+    </mitre>
+    <group>credential_access,brute_force,ssh,</group>
+  </rule>
+
+  <!-- Reverse shell detection -->
+  <rule id="100202" level="14">
+    <if_sid>80700</if_sid>
+    <match type="pcre2">(?i)(bash\s+-i|nc\s+-e|python.*pty|perl.*socket)</match>
+    <description>Possible reverse shell command detected</description>
+    <mitre>
+      <id>T1059</id>
+    </mitre>
+    <group>execution,reverse_shell,</group>
+  </rule>
+
+  <!-- Crontab modification -->
+  <rule id="100203" level="10">
+    <if_sid>80700</if_sid>
+    <match type="pcre2">crontab\s+-e|echo.*crontab|/etc/cron</match>
+    <description>Crontab modification - possible persistence</description>
+    <mitre>
+      <id>T1053.003</id>
+    </mitre>
+    <group>persistence,cron,</group>
+  </rule>
+
+</group>

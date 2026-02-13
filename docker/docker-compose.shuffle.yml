@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  shuffle-frontend:
+    image: ghcr.io/shuffle/shuffle-frontend:latest
+    container_name: shuffle-frontend
+    hostname: shuffle-frontend
+    restart: always
+    ports:
+      - "3001:80"
+    environment:
+      - BACKEND_HOSTNAME=shuffle-backend
+    depends_on:
+      - shuffle-backend
+    networks:
+      - soc-network
+
+  shuffle-backend:
+    image: ghcr.io/shuffle/shuffle-backend:latest
+    container_name: shuffle-backend
+    hostname: shuffle-backend
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
+      - SHUFFLE_FILE_LOCATION=/shuffle-files
+      - ORG_ID=Shuffle
+      - SHUFFLE_DEFAULT_USERNAME=admin
+      - SHUFFLE_DEFAULT_PASSWORD=shuffle123
+      - SHUFFLE_DEFAULT_APIKEY=shuffle-api-key-change-me
+      - SHUFFLE_OPENSEARCH_URL=http://shuffle-opensearch:9200
+      - SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY=true
+    volumes:
+      - shuffle-apps:/shuffle-apps
+      - shuffle-files:/shuffle-files
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - shuffle-opensearch
+    networks:
+      - soc-network
+
+  shuffle-orborus:
+    image: ghcr.io/shuffle/shuffle-orborus:latest
+    container_name: shuffle-orborus
+    hostname: shuffle-orborus
+    restart: always
+    environment:
+      - SHUFFLE_APP_SDK_VERSION=1.2.0
+      - SHUFFLE_WORKER_VERSION=latest
+      - ORG_ID=Shuffle
+      - ENVIRONMENT_NAME=Shuffle
+      - BASE_URL=http://shuffle-backend:5001
+      - DOCKER_API_VERSION=1.40
+      - SHUFFLE_PASS_WORKER_PROXY=false
+      - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=5
+      - CLEANUP=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - shuffle-backend
+    networks:
+      - soc-network
+
+  shuffle-opensearch:
+    image: opensearchproject/opensearch:2.5.0
+    container_name: shuffle-opensearch
+    hostname: shuffle-opensearch
+    restart: always
+    environment:
+      - cluster.name=shuffle-cluster
+      - node.name=shuffle-opensearch
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - plugins.security.disabled=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - shuffle-opensearch-data:/usr/share/opensearch/data
+    networks:
+      - soc-network
+
+volumes:
+  shuffle-apps:
+  shuffle-files:
+  shuffle-opensearch-data:
+
+networks:
+  soc-network:
+    external: true

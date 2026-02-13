@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Elasticsearch for TheHive
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.12
+    container_name: elasticsearch
+    hostname: elasticsearch
+    restart: always
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=thehive-cluster
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - soc-network
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+  # Cassandra for TheHive
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra
+    hostname: cassandra
+    restart: always
+    environment:
+      - CASSANDRA_CLUSTER_NAME=TheHive
+      - CASSANDRA_DC=datacenter1
+      - CASSANDRA_RACK=rack1
+      - MAX_HEAP_SIZE=512M
+      - HEAP_NEWSIZE=256M
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+    networks:
+      - soc-network
+
+  # TheHive 5
+  thehive:
+    image: strangebee/thehive:5.2
+    container_name: thehive
+    hostname: thehive
+    restart: always
+    depends_on:
+      - cassandra
+      - elasticsearch
+    ports:
+      - "9000:9000"
+    environment:
+      - JVM_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - thehive-data:/etc/thehive
+      - thehive-files:/opt/thp/thehive/files
+    command:
+      - --secret
+      - "SuperSecretKey1234567890"
+      - --cql-hostnames
+      - "cassandra"
+      - --index-backend
+      - "elasticsearch"
+      - --es-hostnames
+      - "elasticsearch"
+      - --no-config-cortex
+    networks:
+      - soc-network
+
+  # Cortex
+  cortex:
+    image: thehiveproject/cortex:3.1.7
+    container_name: cortex
+    hostname: cortex
+    restart: always
+    depends_on:
+      - elasticsearch
+    ports:
+      - "9001:9001"
+    environment:
+      - job_directory=/opt/cortex/jobs
+    volumes:
+      - cortex-data:/etc/cortex
+      - cortex-jobs:/opt/cortex/jobs
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - soc-network
+
+volumes:
+  elasticsearch-data:
+  cassandra-data:
+  thehive-data:
+  thehive-files:
+  cortex-data:
+  cortex-jobs:
+
+networks:
+  soc-network:
+    external: true

@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  misp-db:
+    image: mysql:8.0
+    container_name: misp-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: misp_root_password
+      MYSQL_DATABASE: misp
+      MYSQL_USER: misp
+      MYSQL_PASSWORD: misp_password
+    volumes:
+      - misp-db-data:/var/lib/mysql
+    networks:
+      - soc-network
+    command: --default-authentication-plugin=mysql_native_password
+
+  misp-redis:
+    image: redis:7
+    container_name: misp-redis
+    restart: always
+    networks:
+      - soc-network
+
+  misp:
+    image: coolacid/misp-docker:core-latest
+    container_name: misp
+    restart: always
+    depends_on:
+      - misp-db
+      - misp-redis
+    ports:
+      - "8080:80"
+      - "8443:443"
+    environment:
+      - MYSQL_HOST=misp-db
+      - MYSQL_DATABASE=misp
+      - MYSQL_USER=misp
+      - MYSQL_PASSWORD=misp_password
+      - MISP_ADMIN_EMAIL=admin@admin.test
+      - MISP_ADMIN_PASSPHRASE=admin
+      - MISP_BASEURL=https://localhost:8443
+      - REDIS_FQDN=misp-redis
+      - INIT=true
+      - CRON_USER_ID=1
+    volumes:
+      - misp-data:/var/www/MISP
+    networks:
+      - soc-network
+
+volumes:
+  misp-db-data:
+  misp-data:
+
+networks:
+  soc-network:
+    external: true

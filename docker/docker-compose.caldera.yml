@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  caldera:
+    image: mitre/caldera:latest
+    container_name: caldera
+    hostname: caldera
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+      - "7010:7010"
+      - "7011:7011"
+      - "7012:7012"
+    volumes:
+      - caldera-data:/usr/src/app/data
+    networks:
+      - soc-network
+
+volumes:
+  caldera-data:
+
+networks:
+  soc-network:
+    external: true
